@@ -4,6 +4,7 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 
+
 class GraphConvolution(nn.Module):
     """Basic graph convolution layer for undirected graph without edge labels."""
 
@@ -28,6 +29,7 @@ class GraphConvolution(nn.Module):
         return self.__class__.__name__ + ' (' \
                + str(self.input_dim) + ' -> ' \
                + str(self.output_dim) + ')'
+
 
 class GCN(nn.Module):
     def __init__(self, in_dim, hid_dim, out_dim, n_layers, dropout):
@@ -89,7 +91,7 @@ class DenseModel(nn.Module):
             self.layers.append(nn.Linear(num_hidden, out_dim))
 
     def forward(self, x):
-        for l in range(self.num_layers-1):
+        for l in range(self.num_layers - 1):
             x = self.dropout_layer(x)
             x = self.layers[l](x)
             x = torch.tanh(x)
@@ -110,3 +112,44 @@ class LogisticRegression(nn.Module):
         x = self.dropout_layer(x)
         logits = self.linear(x)
         return logits
+
+
+class NodeAttrAttention(nn.Module):
+    def __init__(self, in_features, out_features, dropout, alpha, concat=True):
+        super(NodeAttrAttention, self).__init__()
+        self.dropout = dropout
+        self.in_features = in_features
+        self.out_features = out_features
+        self.alpha = alpha
+        self.concat = concat
+
+        self.W = nn.Parameter(torch.zeros(size=(in_features, out_features)))
+        nn.init.xavier_uniform_(self.W.data, gain=1.414)
+        self.a = nn.Parameter(torch.zeros(size=(2 * out_features, 1)))
+        nn.init.xavier_uniform_(self.a.data, gain=1.414)
+
+        self.leakrelu = nn.LeakyReLU(self.alpha)
+
+    def forward(self, node_embedding, attr_embedding, feat_mat):
+        node_h = torch.mm(node_embedding, self.W)
+        attr_h = torch.mm(attr_embedding, self.W)
+
+        e = self._prepare_attentional_mechanism_input(node_h, attr_h)
+        zero_vec = -9e15 * torch.ones_like(e)
+        attention = torch.where(feat_mat > 0, e, zero_vec)
+        attention = F.softmax(attention, dim=1)
+        attention = F.dropout(attention, self.dropout, training=self.training)
+        h_prime = torch.matmul(attention, attr_h)
+
+        if self.concat:
+            return F.elu(h_prime)
+        else:
+            return h_prime
+
+    def _prepare_attentional_mechanism_input(self, node_h, attr_h):
+        Wh1 = torch.matmul(node_h, self.a[:self.out_features, :])
+        Wh2 = torch.matmul(attr_h, self.a[self.out_features:, :])
+
+        # broadcast add
+        e = Wh1 + Wh2.T
+        return self.leakrelu(e)
