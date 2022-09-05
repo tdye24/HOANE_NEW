@@ -1,6 +1,8 @@
 import time
 from utils import *
+import torch.nn.functional as F
 from model import HOANE
+
 
 def main(args):
     attr_inference = args.attr_inference
@@ -66,18 +68,18 @@ def main(args):
 
         set_random_seed(seed=seed)
 
-
         model = HOANE(num_nodes=num_nodes,
                       input_dim=num_features,
-                      num_hidden=512,
-                      out_dim=512,
+                      num_hidden=args.num_hidden,
+                      out_dim=args.out_dim,
                       noise_dim=5,
                       dropout=args.pretrain_dropout,
                       K=args.K,
                       J=args.J,
                       device=args.device,
-                      decoder_type=args.decoder_type)
-
+                      decoder_type=args.decoder_type,
+                      node_attr_attention=args.node_attr_attention,
+                      node_attr_attention_dropout=args.node_attr_attention_dropout)
 
         model.to(args.device)
         optimizer = optim.Adam(params=model.parameters(), lr=args.pretrain_lr, weight_decay=args.pretrain_wd)
@@ -206,7 +208,13 @@ def main(args):
 
                     # graph_mae_embedding = np.load('./embedding.npy')
                     # node_mu_iw_vec = torch.tensor(graph_mae_embedding).to(args.device)
-
+                    if args.concat_clf:
+                        with torch.no_grad():
+                            fine_grained_features = model.node_attr_attention_layer(node_embedding=node_mu_iw_vec,
+                                                                                    attr_embedding=attr_mu_iw_vec,
+                                                                                    feat_mat=features_test)
+                        concat_features = torch.cat((node_mu_iw_vec, fine_grained_features), dim=1)
+                        node_mu_iw_vec = concat_features
                     final_test_acc, inner_best_val_acc, inner_best_test_acc = node_classification_evaluation(
                         data=node_mu_iw_vec,
                         labels=labels,
@@ -260,9 +268,11 @@ def main(args):
                     f"pretrain_wd {args.pretrain_wd}, "
                     f"finetune_wd {args.finetune_wd}, "
                     f"pretrain_dropout {args.pretrain_dropout}, "
-                    f"finetune_dropout {args.finetune_dropout}\n")
+                    f"finetune_dropout {args.finetune_dropout}, "
+                    f"node_attr_attention_dropout {args.node_attr_attention_dropout}\n")
             f.write(f"Val accuracy: {np.mean(val_acc_over_runs):.4f}/{np.std(val_acc_over_runs):.4f}\n")
             f.write(f"Test accuracy: {np.mean(test_acc_over_runs):.4f}/{np.std(test_acc_over_runs):.4f}\n")
+
 
 if __name__ == '__main__':
     args = get_args()

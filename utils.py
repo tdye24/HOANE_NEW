@@ -12,6 +12,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 import torch.optim as optim
 from layers import LogisticRegression
 
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', type=str, default='v1', help='Method version.')
@@ -46,7 +47,14 @@ def get_args():
     parser.add_argument('--aug-e', type=float, default=0.0, help='Mask ratio of edges.')
     parser.add_argument('--aug-a', type=float, default=0.0, help='Mask ratio of attributes.')
     parser.add_argument('--filename', type=str, default='result.txt', help='Filename for recording results.')
-
+    parser.add_argument('--node-attr-attention', action='store_true', default=False,
+                        help='Do attention between nodes and attributes.')
+    parser.add_argument('--node-attr-attention-dropout', type=float, default=0.0,
+                        help='Dropout of attention between nodes and attributes.')
+    parser.add_argument('--num-hidden', type=int, default=512, help='Hidden dimension size.')
+    parser.add_argument('--out-dim', type=int, default=512, help='Size of ouput embedding.')
+    parser.add_argument('--concat-clf', action='store_true', default=False,
+                        help='Feed the concatenation of node embedding and fine-grained feature embedding to the LR.')
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     args.device = 'cuda' if args.cuda else 'cpu'
@@ -59,10 +67,12 @@ def sample_n(mu, sigma):
     z = mu + eps * sigma
     return z
 
+
 def classes_num(dataset_str):
     return {'cora': 7,
             'citeseer': 6,
             'pubmed': 3}[dataset_str]
+
 
 def accuracy(y_pred, y_true):
     y_true = y_true.squeeze().long()
@@ -70,6 +80,7 @@ def accuracy(y_pred, y_true):
     correct = preds.eq(y_true).double()
     correct = correct.sum().item()
     return correct / len(y_true)
+
 
 def sample_mask(idx, l):
     """Create mask."""
@@ -84,6 +95,7 @@ def parse_index_file(filename):
         index.append(int(line.strip()))
     return index
 
+
 def set_random_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -91,6 +103,7 @@ def set_random_seed(seed):
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.determinstic = True
+
 
 def load_data_with_labels(dataset_str):
     """
@@ -190,6 +203,7 @@ def preprocess_graph(adj):
     adj_normalized = adj_.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt).tocoo()
     return sparse_to_tuple(adj_normalized)
 
+
 def sparse_to_tuple(sparse_mx):
     if not sp.isspmatrix_coo(sparse_mx):
         sparse_mx = sparse_mx.tocoo()
@@ -197,6 +211,7 @@ def sparse_to_tuple(sparse_mx):
     values = sparse_mx.data
     shape = sparse_mx.shape
     return coords, values, shape
+
 
 def mask_test_edges(adj):
     # Function to build test set with 10% positive links
@@ -458,6 +473,7 @@ def get_roc_score_attr(feas_pos, feas_neg, emb_node, emb_attr, features_orig):
     ap_score = average_precision_score(labels_all, preds_all)
 
     return roc_score, ap_score
+
 
 def node_classification_evaluation(data, labels, train_mask, val_mask, test_mask, args):
     lr_classifier = LogisticRegression(num_dim=data.shape[1],

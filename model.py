@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as dist
-from layers import GCN, DenseModel
+from layers import GCN, DenseModel, NodeAttrAttention
 from utils import sample_n
 
 
@@ -15,11 +15,13 @@ class HOANE(nn.Module):
     """
 
     def __init__(self, num_nodes=2708, input_dim=1433, num_hidden=128, out_dim=512, noise_dim=5,
-                 K=1, J=1, dropout=0., device=None, decoder_type='gcn'):
+                 K=1, J=1, dropout=0., device=None, decoder_type='gcn', node_attr_attention=False,
+                 node_attr_attention_dropout=0.0):
         super(HOANE, self).__init__()
         self.num_nodes = num_nodes
         self.dropout = dropout
         self.decoder_type = decoder_type
+        self.node_attr_attention = node_attr_attention
 
         self.node_mu_nn = GCN(in_dim=input_dim + noise_dim, hid_dim=num_hidden, out_dim=out_dim, n_layers=2,
                               dropout=dropout)
@@ -32,7 +34,9 @@ class HOANE(nn.Module):
 
         if self.decoder_type == 'gcn':
             self.decoder = GCN(in_dim=2 * out_dim, hid_dim=num_hidden, out_dim=input_dim, n_layers=2, dropout=dropout)
-
+            if node_attr_attention:
+                self.node_attr_attention_layer = NodeAttrAttention(in_features=out_dim, out_features=out_dim,
+                                                                   dropout=node_attr_attention_dropout, alpha=0.2)
         self.noise_dim = noise_dim
         self.noise_dist = dist.Bernoulli(torch.tensor([.5], device=device))
 
@@ -43,7 +47,7 @@ class HOANE(nn.Module):
 
     def reset_parameters(self):
         for name, param in self.named_parameters():
-            if 'attr' in name:
+            if 'attr_mu_nn' in name or 'attr_var_nn' in name:
                 # print(name)
                 if 'weight' in name:
                     torch.nn.init.xavier_uniform_(param)
@@ -113,8 +117,13 @@ class HOANE(nn.Module):
             else:
                 assert self.decoder_type == 'gcn'
                 z_a = F.dropout(input_a, self.dropout, self.training)
-                weights = F.normalize(x, p=1, dim=1)
-                fine_grained_features = torch.matmul(weights, z_a)
+                if self.node_attr_attention:
+                    fine_grained_features = self.node_attr_attention_layer(node_embedding=z_u,
+                                                                           attr_embedding=z_a,
+                                                                           feat_mat=x)
+                else:
+                    weights = F.normalize(x, p=1, dim=1)
+                    fine_grained_features = torch.matmul(weights, z_a)
                 concat_features = torch.cat((z_u, fine_grained_features), dim=1)
                 logits_attr = self.decoder(adj, concat_features)
 
