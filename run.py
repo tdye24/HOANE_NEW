@@ -77,7 +77,11 @@ def main(args):
                       K=args.K,
                       J=args.J,
                       device=args.device,
+                      encoder_type=args.encoder_type,
+                      encoder_layers=args.encoder_layers,
+                      heads=args.heads,
                       decoder_type=args.decoder_type,
+                      decoder_layers=args.decoder_layers,
                       node_attr_attention=args.node_attr_attention,
                       node_attr_attention_dropout=args.node_attr_attention_dropout)
 

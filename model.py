@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as dist
-from layers import GCN, DenseModel, NodeAttrAttention
+from layers import GCN, GAT, DenseModel, NodeAttrAttention
 from utils import sample_n
 
 
@@ -15,17 +15,46 @@ class HOANE(nn.Module):
     """
 
     def __init__(self, num_nodes=2708, input_dim=1433, num_hidden=128, out_dim=512, noise_dim=5,
-                 K=1, J=1, dropout=0., device=None, decoder_type='gcn', node_attr_attention=False,
+                 K=1, J=1, dropout=0., device=None,
+                 encoder_type='gcn',
+                 encoder_layers=2,
+                 decoder_type='gcn',
+                 decoder_layers=2,
+                 heads=4,
+                 node_attr_attention=False,
                  node_attr_attention_dropout=0.0):
         super(HOANE, self).__init__()
         self.num_nodes = num_nodes
         self.dropout = dropout
+        self.encoder_type = encoder_type
         self.decoder_type = decoder_type
         self.node_attr_attention = node_attr_attention
 
-        self.node_mu_nn = GCN(in_dim=input_dim + noise_dim, hid_dim=num_hidden, out_dim=out_dim, n_layers=2,
-                              dropout=dropout)
-        self.node_var_nn = GCN(in_dim=input_dim, hid_dim=num_hidden, out_dim=out_dim, n_layers=2, dropout=dropout)
+        if self.encoder_type == 'gcn':
+            assert encoder_layers >= 2
+            assert decoder_layers >= 2
+            self.node_mu_nn = GCN(in_dim=input_dim + noise_dim, hid_dim=num_hidden, out_dim=out_dim,
+                                  n_layers=encoder_layers,
+                                  dropout=dropout)
+            self.node_var_nn = GCN(in_dim=input_dim, hid_dim=num_hidden, out_dim=out_dim, n_layers=encoder_layers,
+                                   dropout=dropout)
+        else:
+            assert self.encoder_type == 'gat'
+            assert heads * out_dim == 512
+            self.node_mu_nn = GAT(in_dim=input_dim + noise_dim,
+                                  hid_dim=num_hidden,
+                                  out_dim=out_dim,
+                                  n_layers=encoder_layers,
+                                  heads=heads,
+                                  dropout=dropout,
+                                  alpha=0.2)
+            self.node_var_nn = GAT(in_dim=input_dim,
+                                   hid_dim=num_hidden,
+                                   out_dim=out_dim,
+                                   n_layers=2,
+                                   heads=heads,
+                                   dropout=dropout,
+                                   alpha=0.2)
 
         self.attr_mu_nn = DenseModel(in_dim=num_nodes + noise_dim, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
                                      dropout=dropout)
@@ -33,10 +62,25 @@ class HOANE(nn.Module):
                                       dropout=dropout)
 
         if self.decoder_type == 'gcn':
-            self.decoder = GCN(in_dim=2 * out_dim, hid_dim=num_hidden, out_dim=input_dim, n_layers=2, dropout=dropout)
-            if node_attr_attention:
-                self.node_attr_attention_layer = NodeAttrAttention(in_features=out_dim, out_features=out_dim,
-                                                                   dropout=node_attr_attention_dropout, alpha=0.2)
+            self.decoder = GCN(in_dim=2 * out_dim,
+                               hid_dim=num_hidden,
+                               out_dim=input_dim,
+                               n_layers=2,
+                               dropout=dropout)
+
+        if self.decoder_type == 'gat':
+            self.decoder = GAT(in_dim=2 * out_dim,
+                               hid_dim=num_hidden,
+                               out_dim=input_dim,
+                               n_layers=decoder_layers,
+                               heads=heads,
+                               dropout=dropout,
+                               alpha=0.2)
+        if self.decoder_type in ['gcn', 'gat'] and node_attr_attention:
+            self.node_attr_attention_layer = NodeAttrAttention(in_features=out_dim,
+                                                               out_features=out_dim,
+                                                               dropout=node_attr_attention_dropout,
+                                                               alpha=0.2)
         self.noise_dim = noise_dim
         self.noise_dist = dist.Bernoulli(torch.tensor([.5], device=device))
 
@@ -115,7 +159,7 @@ class HOANE(nn.Module):
                 z_a_t = z_a.transpose(0, 1)
                 logits_attr = torch.matmul(z_u, z_a_t)
             else:
-                assert self.decoder_type == 'gcn'
+                assert self.decoder_type in ['gcn', 'gat']
                 z_a = F.dropout(input_a, self.dropout, self.training)
                 if self.node_attr_attention:
                     fine_grained_features = self.node_attr_attention_layer(node_embedding=z_u,
