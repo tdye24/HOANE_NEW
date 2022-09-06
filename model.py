@@ -54,9 +54,9 @@ class HOANE(nn.Module):
                                    dropout=dropout,
                                    alpha=0.2)
 
-        self.attr_mu_nn = DenseModel(in_dim=num_nodes + noise_dim, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
+        self.attr_mu_nn = DenseModel(in_dim=out_dim + noise_dim, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
                                      dropout=dropout)
-        self.attr_var_nn = DenseModel(in_dim=num_nodes, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
+        self.attr_var_nn = DenseModel(in_dim=out_dim, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
                                       dropout=dropout)
 
         if self.decoder_type == 'gcn':
@@ -191,3 +191,99 @@ class HOANE(nn.Module):
         return merged_node_mu, merged_node_sigma, merged_node_z_samples, node_logv_iw, node_z_samples_iw, \
                merged_attr_mu, merged_attr_sigma, merged_attr_z_samples, attr_logv_iw, attr_z_samples_iw, \
                reconstruct_node_logits, reconstruct_attr_logits, node_mu_iw_vec, attr_mu_iw_vec
+
+
+class HOANE_V2(HOANE):
+    def __init__(self, num_nodes=2708, input_dim=1433, num_hidden=128, out_dim=512, noise_dim=5,
+                 K=1, J=1, dropout=0., device=None,
+                 encoder_type='gcn',
+                 encoder_layers=2,
+                 decoder_type='gcn',
+                 decoder_layers=2,
+                 heads=4,
+                 node_attr_attention=False,
+                 node_attr_attention_dropout=0.0,
+                 encoder_node_attr_attention=False,
+                 encoder_node_attr_attention_dropout=0.0):
+        super(HOANE_V2, self).__init__(
+            num_nodes=num_nodes,
+            input_dim=input_dim,
+            num_hidden=num_hidden,
+            out_dim=out_dim,
+            noise_dim=noise_dim,
+            K=K,
+            J=J,
+            dropout=dropout,
+            device=device,
+            encoder_type=encoder_type,
+            encoder_layers=encoder_layers,
+            decoder_type=decoder_type,
+            decoder_layers=decoder_layers,
+            heads=heads,
+            node_attr_attention=node_attr_attention,
+            node_attr_attention_dropout=node_attr_attention_dropout
+        )
+        self.encoder_node_attr_attention = encoder_node_attr_attention
+
+        if self.encoder_type in ['gcn', 'gat'] and encoder_node_attr_attention:
+            self.encoder_node_attr_attention_layer = NodeAttrAttention(in_features=out_dim,
+                                                                       out_features=out_dim,
+                                                                       dropout=encoder_node_attr_attention_dropout,
+                                                                       alpha=0.2)
+
+    def encode(self, adj, x):
+        attr_dim = x.shape[1]
+        num_nodes = x.shape[0]
+        node_mu_input = x.unsqueeze(1).repeat(1, self.K + self.J, 1)
+        node_noise_e = self.noise_dist.sample(torch.Size([num_nodes, self.K + self.J, self.noise_dim]))
+        node_noise_e = torch.squeeze(node_noise_e)
+        noised_node_mu_input = torch.concat((node_noise_e, node_mu_input), 2)
+        node_mu = self.node_mu_nn(adj, noised_node_mu_input)
+        node_mu_iw = node_mu[:, :self.K, :]
+        node_mu_star = node_mu[:, self.K:, :]
+        node_mu_iw_vec = torch.mean(node_mu_iw, 1)
+
+        node_logv = self.node_var_nn(adj, x)
+        node_logv_iw = node_logv.unsqueeze(1).repeat(1, self.K, 1)
+        node_sigma_iw1 = torch.exp(0.5 * node_logv_iw)
+        merged_node_sigma = node_sigma_iw1.unsqueeze(2).repeat(1, 1, self.J + 1, 1)
+
+        node_z_samples_iw = sample_n(mu=node_mu_iw, sigma=node_sigma_iw1)
+        merged_node_z_samples = node_z_samples_iw.unsqueeze(2).repeat(1, 1, self.J + 1, 1)
+        node_mu_star1 = node_mu_star.unsqueeze(1).repeat(1, self.K, 1, 1)
+        merged_node_mu = torch.concat((node_mu_star1, node_mu_iw.unsqueeze(2)), 2)
+
+        # generate mu of attrs conditioning on mu of nodes
+        if self.encoder_node_attr_attention:
+            pass
+        else:
+            weights = F.normalize(x.transpose(0, 1), p=1, dim=1).unsqueeze(1).repeat(1, self.K + self.J, 1)
+            attr_mu_input = torch.matmul(weights.transpose(0, 1), node_mu.transpose(0, 1)).transpose(0, 1)
+            attr_noise_e = self.noise_dist.sample(torch.Size([attr_dim, self.K + self.J, self.noise_dim]))
+            attr_noise_e = torch.squeeze(attr_noise_e)
+            noised_attr_mu_input = torch.concat((attr_noise_e, attr_mu_input), 2)  # 1433x2x(512+5)
+
+        attr_mu = self.attr_mu_nn(noised_attr_mu_input)
+        attr_mu_iw = attr_mu[:, :self.K, :]
+        attr_mu_star = attr_mu[:, self.K:, :]
+        attr_mu_iw_vec = torch.mean(attr_mu_iw, 1)
+
+        # generate logv of attrs conditioning on logv of nodes
+        if self.encoder_node_attr_attention:
+            pass
+        else:
+            weights = F.normalize(x.transpose(0, 1), p=1, dim=1)
+            attr_logv_input = torch.matmul(weights, node_logv)
+        attr_logv = self.attr_var_nn(x=attr_logv_input)
+        attr_logv_iw = attr_logv.unsqueeze(1).repeat(1, self.K, 1)
+        attr_sigma_iw1 = torch.exp(0.5 * attr_logv_iw)
+        merged_attr_sigma = attr_sigma_iw1.unsqueeze(2).repeat(1, 1, self.J + 1, 1)
+
+        attr_z_samples_iw = sample_n(mu=attr_mu_iw, sigma=attr_sigma_iw1)
+        merged_attr_z_samples = attr_z_samples_iw.unsqueeze(2).repeat(1, 1, self.J + 1, 1)
+        attr_mu_star1 = attr_mu_star.unsqueeze(1).repeat(1, self.K, 1, 1)
+        merged_attr_mu = torch.concat((attr_mu_star1, attr_mu_iw.unsqueeze(2)), 2)
+
+        return merged_node_mu, merged_node_sigma, merged_node_z_samples, node_logv_iw, node_z_samples_iw, \
+               merged_attr_mu, merged_attr_sigma, merged_attr_z_samples, attr_logv_iw, attr_z_samples_iw, \
+               node_mu_iw_vec, attr_mu_iw_vec

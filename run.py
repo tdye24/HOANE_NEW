@@ -1,7 +1,7 @@
 import time
 from utils import *
 import torch.nn.functional as F
-from model import HOANE
+from model import HOANE, HOANE_V2
 
 
 def main(args):
@@ -68,22 +68,44 @@ def main(args):
 
         set_random_seed(seed=seed)
 
-        model = HOANE(num_nodes=num_nodes,
-                      input_dim=num_features,
-                      num_hidden=args.num_hidden,
-                      out_dim=args.out_dim,
-                      noise_dim=5,
-                      dropout=args.pretrain_dropout,
-                      K=args.K,
-                      J=args.J,
-                      device=args.device,
-                      encoder_type=args.encoder_type,
-                      encoder_layers=args.encoder_layers,
-                      heads=args.heads,
-                      decoder_type=args.decoder_type,
-                      decoder_layers=args.decoder_layers,
-                      node_attr_attention=args.node_attr_attention,
-                      node_attr_attention_dropout=args.node_attr_attention_dropout)
+        if args.version == 'v1':
+            model = HOANE(num_nodes=num_nodes,
+                          input_dim=num_features,
+                          num_hidden=args.num_hidden,
+                          out_dim=args.out_dim,
+                          noise_dim=5,
+                          dropout=args.pretrain_dropout,
+                          K=args.K,
+                          J=args.J,
+                          device=args.device,
+                          encoder_type=args.encoder_type,
+                          encoder_layers=args.encoder_layers,
+                          heads=args.heads,
+                          decoder_type=args.decoder_type,
+                          decoder_layers=args.decoder_layers,
+                          node_attr_attention=args.node_attr_attention,
+                          node_attr_attention_dropout=args.node_attr_attention_dropout)
+        else:
+            assert args.version == 'v2'
+            model = HOANE_V2(num_nodes=num_nodes,
+                             input_dim=num_features,
+                             num_hidden=args.num_hidden,
+                             out_dim=args.out_dim,
+                             noise_dim=5,
+                             dropout=args.pretrain_dropout,
+                             K=args.K,
+                             J=args.J,
+                             device=args.device,
+                             encoder_type=args.encoder_type,
+                             encoder_layers=args.encoder_layers,
+                             heads=args.heads,
+                             decoder_type=args.decoder_type,
+                             decoder_layers=args.decoder_layers,
+                             node_attr_attention=args.node_attr_attention,
+                             node_attr_attention_dropout=args.node_attr_attention_dropout,
+                             encoder_node_attr_attention=args.encoder_node_attr_attention,
+                             encoder_node_attr_attention_dropout=args.encoder_node_attr_attention_dropout
+                             )
 
         model.to(args.device)
         optimizer = optim.Adam(params=model.parameters(), lr=args.pretrain_lr, weight_decay=args.pretrain_wd)
