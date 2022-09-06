@@ -54,6 +54,10 @@ def get_args():
                         help='Do attention between nodes and attributes.')
     parser.add_argument('--node-attr-attention-dropout', type=float, default=0.0,
                         help='Dropout of attention between nodes and attributes.')
+    parser.add_argument('--encoder-node-attr-attention', action='store_true', default=False,
+                        help='Do attention between nodes and attributes when encoding attrs.')
+    parser.add_argument('--encoder-node-attr-attention-dropout', type=float, default=0.0,
+                        help='Dropout of attention between nodes and attributes when encoding attrs.')
     parser.add_argument('--num-hidden', type=int, default=512, help='Hidden dimension size.')
     parser.add_argument('--out-dim', type=int, default=512, help='Size of ouput embedding.')
     parser.add_argument('--concat-clf', action='store_true', default=False,
