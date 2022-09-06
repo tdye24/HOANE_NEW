@@ -273,7 +273,9 @@ def main(args):
                     f"finetune_wd {args.finetune_wd}, "
                     f"pretrain_dropout {args.pretrain_dropout}, "
                     f"finetune_dropout {args.finetune_dropout}, "
-                    f"node_attr_attention_dropout {args.node_attr_attention_dropout}\n")
+                    f"node_attr_attention_dropout {args.node_attr_attention_dropout}, "
+                    f"encoder_layers {args.encoder_layers}, "
+                    f"decoder_layers {args.decoder_layers}\n")
             f.write(f"Val accuracy: {np.mean(val_acc_over_runs):.4f}/{np.std(val_acc_over_runs):.4f}\n")
             f.write(f"Test accuracy: {np.mean(test_acc_over_runs):.4f}/{np.std(test_acc_over_runs):.4f}\n")
 

@@ -31,8 +31,6 @@ class HOANE(nn.Module):
         self.node_attr_attention = node_attr_attention
 
         if self.encoder_type == 'gcn':
-            assert encoder_layers >= 2
-            assert decoder_layers >= 2
             self.node_mu_nn = GCN(in_dim=input_dim + noise_dim, hid_dim=num_hidden, out_dim=out_dim,
                                   n_layers=encoder_layers,
                                   dropout=dropout)
@@ -51,7 +49,7 @@ class HOANE(nn.Module):
             self.node_var_nn = GAT(in_dim=input_dim,
                                    hid_dim=num_hidden,
                                    out_dim=out_dim,
-                                   n_layers=2,
+                                   n_layers=encoder_layers,
                                    heads=heads,
                                    dropout=dropout,
                                    alpha=0.2)
@@ -65,7 +63,7 @@ class HOANE(nn.Module):
             self.decoder = GCN(in_dim=2 * out_dim,
                                hid_dim=num_hidden,
                                out_dim=input_dim,
-                               n_layers=2,
+                               n_layers=decoder_layers,
                                dropout=dropout)
 
         if self.decoder_type == 'gat':
@@ -183,7 +181,8 @@ class HOANE(nn.Module):
         merged_node_mu, merged_node_sigma, merged_node_z_samples, node_logv_iw, node_z_samples_iw, \
         merged_attr_mu, merged_attr_sigma, merged_attr_z_samples, attr_logv_iw, attr_z_samples_iw, \
         node_mu_iw_vec, attr_mu_iw_vec = self.encode(adj, x)
-
+        assert node_mu_iw_vec.shape[1] == 512
+        assert attr_mu_iw_vec.shape[1] == 512
         reconstruct_node_logits, reconstruct_attr_logits = self.decode(adj=adj,
                                                                        x=x,
                                                                        node_z=node_z_samples_iw,
