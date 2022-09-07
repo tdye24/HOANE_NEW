@@ -1,10 +1,16 @@
 import time
+import wandb
 from utils import *
 import torch.nn.functional as F
 from model import HOANE, HOANE_V2
 
 
 def main(args):
+    if args.wandb:
+        wandb.init(project="HOANE_NEW", entity="tdye24")
+        wandb.watch_called = False
+        config = wandb.config
+        config.update(args)
     attr_inference = args.attr_inference
     link_prediction = args.link_prediction
     node_classification = args.node_classification
@@ -297,9 +303,20 @@ def main(args):
                     f"finetune_dropout {args.finetune_dropout}, "
                     f"node_attr_attention_dropout {args.node_attr_attention_dropout}, "
                     f"encoder_layers {args.encoder_layers}, "
-                    f"decoder_layers {args.decoder_layers}\n")
+                    f"decoder_layers {args.decoder_layers}, "
+                    f"aug_e {args.aug_e}, "
+                    f"aug_a {args.aug_a}\n")
             f.write(f"Val accuracy: {np.mean(val_acc_over_runs):.4f}/{np.std(val_acc_over_runs):.4f}\n")
             f.write(f"Test accuracy: {np.mean(test_acc_over_runs):.4f}/{np.std(test_acc_over_runs):.4f}\n")
+
+        if args.wandb:
+            summary = {
+                'ValAcc': np.mean(val_acc_over_runs),
+                'ValStd': np.std(val_acc_over_runs),
+                'TestAcc': np.mean(test_acc_over_runs),
+                'TestStd': np.std(test_acc_over_runs)
+            }
+            wandb.log(summary)
 
 
 if __name__ == '__main__':

@@ -62,6 +62,7 @@ def get_args():
     parser.add_argument('--out-dim', type=int, default=512, help='Size of ouput embedding.')
     parser.add_argument('--concat-clf', action='store_true', default=False,
                         help='Feed the concatenation of node embedding and fine-grained feature embedding to the LR.')
+    parser.add_argument('--wandb', action='store_true', default=False, help='Use WandB.')
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     args.device = 'cuda' if args.cuda else 'cpu'

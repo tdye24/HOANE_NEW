@@ -54,9 +54,9 @@ class HOANE(nn.Module):
                                    dropout=dropout,
                                    alpha=0.2)
 
-        self.attr_mu_nn = DenseModel(in_dim=out_dim + noise_dim, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
+        self.attr_mu_nn = DenseModel(in_dim=num_nodes + noise_dim, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
                                      dropout=dropout)
-        self.attr_var_nn = DenseModel(in_dim=out_dim, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
+        self.attr_var_nn = DenseModel(in_dim=num_nodes, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
                                       dropout=dropout)
 
         if self.decoder_type == 'gcn':
@@ -223,6 +223,10 @@ class HOANE_V2(HOANE):
             node_attr_attention=node_attr_attention,
             node_attr_attention_dropout=node_attr_attention_dropout
         )
+        self.attr_mu_nn = DenseModel(in_dim=out_dim + noise_dim, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
+                                     dropout=dropout)
+        self.attr_var_nn = DenseModel(in_dim=out_dim, num_hidden=num_hidden, out_dim=out_dim, num_layers=2,
+                                      dropout=dropout)
         self.encoder_node_attr_attention = encoder_node_attr_attention
 
         if self.encoder_type in ['gcn', 'gat'] and encoder_node_attr_attention:
