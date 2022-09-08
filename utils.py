@@ -533,7 +533,7 @@ def load_best_configs(args, path):
     configs = configs[args.tag]
 
     for k, v in configs.items():
-        if "lr" in k or "wd" in k:
+        if "lr" in k or "wd" in k or 'eps' in k:
             v = float(v)
         setattr(args, k, v)
     print(f"------ Use best configs of {args.tag} ------")

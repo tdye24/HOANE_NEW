@@ -25,6 +25,7 @@ cora_v1:
   heads: 4
   aug_e: 0
   aug_a: 0
+  eps：1e-10
 
 cora_v2:
   version: v2
@@ -53,6 +54,7 @@ cora_v2:
   heads: 4
   aug_e: 0
   aug_a: 0
+  eps: 1e-10
 
 cora_v3:
   version: v2
@@ -81,3 +83,4 @@ cora_v3:
   heads: 4
   aug_e: 0.2
   aug_a: 0.1
+  eps: 1e-10
