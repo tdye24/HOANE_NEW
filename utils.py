@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import sys
+import yaml
 import random
 import argparse
 import scipy
@@ -10,6 +11,7 @@ import torch.nn.functional as F
 import networkx as nx
 from sklearn.metrics import roc_auc_score, average_precision_score
 import torch.optim as optim
+import logging
 from layers import LogisticRegression
 
 
@@ -63,6 +65,8 @@ def get_args():
     parser.add_argument('--concat-clf', action='store_true', default=False,
                         help='Feed the concatenation of node embedding and fine-grained feature embedding to the LR.')
     parser.add_argument('--wandb', action='store_true', default=False, help='Use WandB.')
+    parser.add_argument('--use-cfg', action='store_true', default=False, help='Use the best config.')
+    parser.add_argument('--tag', type=str, default='cora_v1', help='{Dataset}_{algorithm_version}.')
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     args.device = 'cuda' if args.cuda else 'cpu'
@@ -516,3 +520,21 @@ def node_classification_evaluation(data, labels, train_mask, val_mask, test_mask
                 best_val_test_acc = test_acc
             # print("f_epoch", f_epoch, "train acc", train_acc, "val acc", val_acc, "test acc", test_acc)
     return test_acc, best_val_acc, best_val_test_acc
+
+
+def load_best_configs(args, path):
+    with open(path, "r") as f:
+        configs = yaml.load(f, yaml.FullLoader)
+
+    if args.tag not in configs:
+        print(f"Best args of {args.tag} not found")
+        return args
+
+    configs = configs[args.tag]
+
+    for k, v in configs.items():
+        if "lr" in k or "wd" in k:
+            v = float(v)
+        setattr(args, k, v)
+    print(f"------ Use best configs of {args.tag} ------")
+    return args

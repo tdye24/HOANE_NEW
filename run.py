@@ -321,5 +321,7 @@ def main(args):
 
 if __name__ == '__main__':
     args = get_args()
+    if args.use_cfg:
+        args = load_best_configs(args, "configs.yml")
     print(args)
     main(args)
