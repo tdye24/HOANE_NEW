@@ -6,6 +6,7 @@ from model import HOANE, HOANE_V2
 
 
 def main(args):
+    LOSS_NAN = False
     if args.wandb:
         wandb.init(project="HOANE_NEW", entity="tdye24")
         wandb.watch_called = False
@@ -175,6 +176,9 @@ def main(args):
                 node_log_prior_iw * warmup / num_nodes +
                 attr_log_prior_iw * warmup / num_features -
                 log_H_iw * warmup / (num_nodes + num_features), dim=0) + np.log(args.K)
+            if torch.isnan(loss):
+                LOSS_NAN = True
+                break
             loss.backward()
             if epoch % args.display_step == 0:
                 print(time.time() - start_time)
@@ -275,6 +279,8 @@ def main(args):
             test_roc_over_runs.append(best_roc_test)
             test_ap_over_runs.append(best_ap_test)
         if node_classification:
+            if LOSS_NAN:
+                break
             print("Node classification, val_acc", '{:.5f}'.format(outer_best_val_acc), "test_acc",
                   '{:.5f}'.format(outer_best_test_acc))
             val_acc_over_runs.append(outer_best_val_acc)
@@ -285,6 +291,21 @@ def main(args):
         print("ROC: {:.5f}".format(np.mean(test_roc_over_runs)), "+-", "{:.5f}".format(np.std(test_roc_over_runs)))
         print("AP: {:.5f}".format(np.mean(test_ap_over_runs)), "+-", "{:.5f}".format(np.std(test_ap_over_runs)))
     if node_classification:
+        if LOSS_NAN:
+            with open(f'./{args.filename}', 'a') as f:
+                f.write(f"pretrain_lr {args.pretrain_lr}, "
+                        f"finetune_lr {args.finetune_lr}, "
+                        f"pretrain_wd {args.pretrain_wd}, "
+                        f"finetune_wd {args.finetune_wd}, "
+                        f"pretrain_dropout {args.pretrain_dropout}, "
+                        f"finetune_dropout {args.finetune_dropout}, "
+                        f"node_attr_attention_dropout {args.node_attr_attention_dropout}, "
+                        f"encoder_layers {args.encoder_layers}, "
+                        f"decoder_layers {args.decoder_layers}, "
+                        f"aug_e {args.aug_e}, "
+                        f"aug_a {args.aug_a}\n")
+                f.write(f"LOSS NAN\n")
+            exit(0)
         print("Val")
         print("Val accuracy", val_acc_over_runs)
         print("Val accuracy: {:.5f}".format(np.mean(val_acc_over_runs)), "+-",
