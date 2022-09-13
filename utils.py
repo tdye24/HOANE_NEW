@@ -98,9 +98,9 @@ def classes_num(dataset_str):
             'citeseer': 6,
             'pubmed': 3,
             'cs': 15,
-            'physics': -1,
-            'photo': -1,
-            'comp': -1}[dataset_str]
+            'physics': 5,
+            'photo': 8,
+            'comp': 10}[dataset_str]
 
 
 def accuracy(y_pred, y_true):
