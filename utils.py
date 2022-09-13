@@ -11,8 +11,8 @@ import torch.nn.functional as F
 import networkx as nx
 from sklearn.metrics import roc_auc_score, average_precision_score
 import torch.optim as optim
-import logging
 from layers import LogisticRegression
+from dgl.data import AmazonCoBuyPhotoDataset, AmazonCoBuyComputerDataset, CoauthorCSDataset, CoauthorPhysicsDataset
 
 
 def get_args():
@@ -96,7 +96,11 @@ def sample_n(mu, sigma):
 def classes_num(dataset_str):
     return {'cora': 7,
             'citeseer': 6,
-            'pubmed': 3}[dataset_str]
+            'pubmed': 3,
+            'cs': 15,
+            'physics': -1,
+            'photo': -1,
+            'comp': -1}[dataset_str]
 
 
 def accuracy(y_pred, y_true):
@@ -150,52 +154,91 @@ def load_data_with_labels(dataset_str):
     :param dataset_str: Dataset name
     :return: All data input files loaded (as well the training/test data).
     """
-    names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
-    objects = []
-    for i in range(len(names)):
-        with open("data/ind.{}.{}".format(dataset_str, names[i]), 'rb') as f:
-            if sys.version_info > (3, 0):
-                objects.append(pkl.load(f, encoding='latin1'))
-            else:
-                objects.append(pkl.load(f))
+    if dataset_str in ['cora', 'citeseer', 'pubmed']:
+        names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
+        objects = []
+        for i in range(len(names)):
+            with open("data/ind.{}.{}".format(dataset_str, names[i]), 'rb') as f:
+                if sys.version_info > (3, 0):
+                    objects.append(pkl.load(f, encoding='latin1'))
+                else:
+                    objects.append(pkl.load(f))
 
-    x, y, tx, ty, allx, ally, graph = tuple(objects)
-    test_idx_reorder = parse_index_file("data/ind.{}.test.index".format(dataset_str))
-    test_idx_range = np.sort(test_idx_reorder)
+        x, y, tx, ty, allx, ally, graph = tuple(objects)
+        test_idx_reorder = parse_index_file("data/ind.{}.test.index".format(dataset_str))
+        test_idx_range = np.sort(test_idx_reorder)
 
-    if dataset_str == 'citeseer':
-        # Fix citeseer dataset (there are some isolated nodes in the graph)
-        # Find isolated nodes, add them as zero-vecs into the right position
-        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder) + 1)
-        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
-        tx_extended[test_idx_range - min(test_idx_range), :] = tx
-        tx = tx_extended
-        ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
-        ty_extended[test_idx_range - min(test_idx_range), :] = ty
-        ty = ty_extended
+        if dataset_str == 'citeseer':
+            # Fix citeseer dataset (there are some isolated nodes in the graph)
+            # Find isolated nodes, add them as zero-vecs into the right position
+            test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder) + 1)
+            tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
+            tx_extended[test_idx_range - min(test_idx_range), :] = tx
+            tx = tx_extended
+            ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
+            ty_extended[test_idx_range - min(test_idx_range), :] = ty
+            ty = ty_extended
 
-    features = sp.vstack((allx, tx)).tolil()
-    features[test_idx_reorder, :] = features[test_idx_range, :]
+        features = sp.vstack((allx, tx)).tolil()
+        features[test_idx_reorder, :] = features[test_idx_range, :]
 
-    adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))
+        adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))
 
-    labels = np.vstack((ally, ty))
-    labels[test_idx_reorder, :] = labels[test_idx_range, :]
+        labels = np.vstack((ally, ty))
+        labels[test_idx_reorder, :] = labels[test_idx_range, :]
 
-    idx_test = test_idx_range.tolist()
-    idx_train = range(len(y))
-    idx_val = range(len(y), len(y) + 500)
+        idx_test = test_idx_range.tolist()
+        idx_train = range(len(y))
+        idx_val = range(len(y), len(y) + 500)
 
-    train_mask = sample_mask(idx_train, labels.shape[0])
-    val_mask = sample_mask(idx_val, labels.shape[0])
-    test_mask = sample_mask(idx_test, labels.shape[0])
+        train_mask = sample_mask(idx_train, labels.shape[0])
+        val_mask = sample_mask(idx_val, labels.shape[0])
+        test_mask = sample_mask(idx_test, labels.shape[0])
 
-    # y_train = np.zeros(labels.shape)
-    # y_val = np.zeros(labels.shape)
-    # y_test = np.zeros(labels.shape)
-    # y_train[train_mask, :] = labels[train_mask, :]
-    # y_val[val_mask, :] = labels[val_mask, :]
-    # y_test[test_mask, :] = labels[test_mask, :]
+        # y_train = np.zeros(labels.shape)
+        # y_val = np.zeros(labels.shape)
+        # y_test = np.zeros(labels.shape)
+        # y_train[train_mask, :] = labels[train_mask, :]
+        # y_val[val_mask, :] = labels[val_mask, :]
+        # y_test[test_mask, :] = labels[test_mask, :]
+    else:
+        assert dataset_str in ['cs', 'physics', 'photo', 'comp']
+        if dataset_str == 'photo':
+            dataset = AmazonCoBuyPhotoDataset(raw_dir='./data')
+        elif dataset_str == 'comp':
+            dataset = AmazonCoBuyComputerDataset(raw_dir='./data')
+        elif dataset_str == 'cs':
+            dataset = CoauthorCSDataset(raw_dir='./data')
+        else:
+            assert dataset_str == 'physics'
+            dataset = CoauthorPhysicsDataset(raw_dir='./data')
+
+        graph = dataset[0]
+
+        train_ratio = 0.1
+        val_ratio = 0.1
+        test_ratio = 0.8
+
+        N = graph.number_of_nodes()
+        train_num = int(N * train_ratio)
+        val_num = int(N * (train_ratio + val_ratio))
+
+        idx = np.arange(N)
+        np.random.shuffle(idx)
+
+        train_idx = idx[:train_num]
+        val_idx = idx[train_num:val_num]
+        test_idx = idx[val_num:]
+
+        train_mask = sample_mask(train_idx, N)
+        val_mask = sample_mask(val_idx, N)
+        test_mask = sample_mask(test_idx, N)
+
+        adj = sp.csr_matrix(graph.adj().to_dense().numpy().astype(np.int64))
+        feat = graph.ndata.pop('feat')
+        features = sp.lil_matrix(feat.numpy())
+        labels_orig = graph.ndata.pop('label')
+        labels = np.eye(dataset.num_classes, dtype=np.int32)[labels_orig]
 
     return adj, features, labels, train_mask, val_mask, test_mask
 
