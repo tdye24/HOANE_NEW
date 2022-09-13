@@ -22,6 +22,7 @@ def get_args():
     parser.add_argument('--attr-inference', action='store_true', default=False, help='Do attribute inference.')
     parser.add_argument('--link-prediction', action='store_true', default=False, help='Do link prediction.')
     parser.add_argument('--no-cuda', action='store_true', default=False, help='Disables CUDA training.')
+    parser.add_argument('--gpu-id', type=int, default=0, help='GPU ID.')
     parser.add_argument('--seeds', type=int, nargs="+", default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], help='Random seed.')
     parser.add_argument('--pretrain-epochs', type=int, default=3500, help='Number of epochs to pretrain.')
     parser.add_argument('--finetune-epochs', type=int, default=500, help='Number of epochs to finetune.')
@@ -69,9 +70,21 @@ def get_args():
     parser.add_argument('--tag', type=str, default='cora_v1', help='{Dataset}_{algorithm_version}.')
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
-    args.device = 'cuda' if args.cuda else 'cpu'
+    args.device = f'cuda:{args.gpu_id}' if args.cuda else 'cpu'
+    args.threshold = get_threshold(dataset_str=args.dataset)
 
     return args
+
+
+def get_threshold(dataset_str):
+    threshold = 100
+    if dataset_str == 'cora':
+        threshold = 84
+    elif dataset_str == 'citeseer':
+        threshold = 73
+    elif dataset_str == 'pubmed':
+        threshold = 80
+    return threshold
 
 
 def sample_n(mu, sigma):
@@ -197,7 +210,8 @@ def prepare_inputs(adj, features):
     norm_node = adj.shape[0] * adj.shape[0] / float((adj.shape[0] * adj.shape[0] - adj.sum()) * 2)
 
     features = torch.FloatTensor(np.array(features.todense()))
-    features_nonzero = torch.where(features == 1)[0].shape[0]
+    # features_nonzero = torch.where(features == 1)[0].shape[0]
+    features_nonzero = features.sum().item()
 
     pos_weight_attr = torch.tensor(
         float(features.shape[0] * features.shape[1] - features_nonzero) / features_nonzero)

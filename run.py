@@ -1,5 +1,4 @@
 import time
-import wandb
 from utils import *
 import torch.nn.functional as F
 from model import HOANE, HOANE_V2
@@ -8,6 +7,7 @@ from model import HOANE, HOANE_V2
 def main(args):
     LOSS_NAN = False
     if args.wandb:
+        import wandb
         wandb.init(project="HOANE_NEW", entity="tdye24")
         wandb.watch_called = False
         config = wandb.config
@@ -186,7 +186,19 @@ def main(args):
             optimizer.step()
 
             if args.dataset == 'cora':
-                threshold = 0
+                if link_prediction:
+                    threshold = 0
+                elif attr_inference:
+                    threshold = 0
+                else:
+                    threshold = 0
+            elif args.dataset == 'pubmed':
+                if link_prediction:
+                    threshold = 0
+                elif attr_inference:
+                    threshold = 0
+                else:
+                    threshold = 400
             else:
                 threshold = 0
 
@@ -290,6 +302,16 @@ def main(args):
         print("Test AP", test_ap_over_runs)
         print("ROC: {:.5f}".format(np.mean(test_roc_over_runs)), "+-", "{:.5f}".format(np.std(test_roc_over_runs)))
         print("AP: {:.5f}".format(np.mean(test_ap_over_runs)), "+-", "{:.5f}".format(np.std(test_ap_over_runs)))
+
+        if args.wandb:
+            summary = {
+                'ROC': np.mean(test_roc_over_runs),
+                'ROCStd': np.std(test_roc_over_runs),
+                'AP': np.mean(test_ap_over_runs),
+                'APStd': np.std(test_ap_over_runs)
+            }
+            wandb.log(summary)
+
     if node_classification:
         if LOSS_NAN:
             with open(f'./{args.filename}', 'a') as f:
@@ -338,6 +360,17 @@ def main(args):
                 'TestStd': np.std(test_acc_over_runs)
             }
             wandb.log(summary)
+
+            from datetime import timedelta
+            from wandb import AlertLevel
+
+            if np.mean(test_acc_over_runs) > args.threshold:
+                wandb.alert(
+                    title='High accuracy',
+                    text=f'Accuracy {np.mean(test_acc_over_runs)} is above the acceptable threshold {args.threshold}',
+                    level=AlertLevel.WARN,
+                    wait_duration=timedelta(minutes=5)
+                )
 
 
 if __name__ == '__main__':

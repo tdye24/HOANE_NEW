@@ -38,7 +38,7 @@ class HOANE(nn.Module):
                                    dropout=dropout)
         else:
             assert self.encoder_type == 'gat'
-            assert heads * out_dim == 512
+            # assert heads * out_dim == 512
             self.node_mu_nn = GAT(in_dim=input_dim + noise_dim,
                                   hid_dim=num_hidden,
                                   out_dim=out_dim,
@@ -103,7 +103,7 @@ class HOANE(nn.Module):
         node_mu_input = x.unsqueeze(1).repeat(1, self.K + self.J, 1)
         node_noise_e = self.noise_dist.sample(torch.Size([num_nodes, self.K + self.J, self.noise_dim]))
         node_noise_e = torch.squeeze(node_noise_e)
-        noised_node_mu_input = torch.concat((node_noise_e, node_mu_input), 2)
+        noised_node_mu_input = torch.cat((node_noise_e, node_mu_input), 2)
         node_mu = self.node_mu_nn(adj, noised_node_mu_input)
         node_mu_iw = node_mu[:, :self.K, :]
         node_mu_star = node_mu[:, self.K:, :]
@@ -117,12 +117,12 @@ class HOANE(nn.Module):
         node_z_samples_iw = sample_n(mu=node_mu_iw, sigma=node_sigma_iw1)
         merged_node_z_samples = node_z_samples_iw.unsqueeze(2).repeat(1, 1, self.J + 1, 1)
         node_mu_star1 = node_mu_star.unsqueeze(1).repeat(1, self.K, 1, 1)
-        merged_node_mu = torch.concat((node_mu_star1, node_mu_iw.unsqueeze(2)), 2)
+        merged_node_mu = torch.cat((node_mu_star1, node_mu_iw.unsqueeze(2)), 2)
 
         attr_mu_input = x.transpose(0, 1).unsqueeze(1).repeat(1, self.K + self.J, 1)
         attr_noise_e = self.noise_dist.sample(torch.Size([attr_dim, self.K + self.J, self.noise_dim]))
         attr_noise_e = torch.squeeze(attr_noise_e)
-        noised_attr_mu_input = torch.concat((attr_noise_e, attr_mu_input), 2)
+        noised_attr_mu_input = torch.cat((attr_noise_e, attr_mu_input), 2)
         attr_mu = self.attr_mu_nn(noised_attr_mu_input)
         attr_mu_iw = attr_mu[:, :self.K, :]
         attr_mu_star = attr_mu[:, self.K:, :]
@@ -136,7 +136,7 @@ class HOANE(nn.Module):
         attr_z_samples_iw = sample_n(mu=attr_mu_iw, sigma=attr_sigma_iw1)
         merged_attr_z_samples = attr_z_samples_iw.unsqueeze(2).repeat(1, 1, self.J + 1, 1)
         attr_mu_star1 = attr_mu_star.unsqueeze(1).repeat(1, self.K, 1, 1)
-        merged_attr_mu = torch.concat((attr_mu_star1, attr_mu_iw.unsqueeze(2)), 2)
+        merged_attr_mu = torch.cat((attr_mu_star1, attr_mu_iw.unsqueeze(2)), 2)
 
         return merged_node_mu, merged_node_sigma, merged_node_z_samples, node_logv_iw, node_z_samples_iw, \
                merged_attr_mu, merged_attr_sigma, merged_attr_z_samples, attr_logv_iw, attr_z_samples_iw, \
@@ -241,7 +241,7 @@ class HOANE_V2(HOANE):
         node_mu_input = x.unsqueeze(1).repeat(1, self.K + self.J, 1)
         node_noise_e = self.noise_dist.sample(torch.Size([num_nodes, self.K + self.J, self.noise_dim]))
         node_noise_e = torch.squeeze(node_noise_e)
-        noised_node_mu_input = torch.concat((node_noise_e, node_mu_input), 2)
+        noised_node_mu_input = torch.cat((node_noise_e, node_mu_input), 2)
         node_mu = self.node_mu_nn(adj, noised_node_mu_input)
         node_mu_iw = node_mu[:, :self.K, :]
         node_mu_star = node_mu[:, self.K:, :]
@@ -255,7 +255,7 @@ class HOANE_V2(HOANE):
         node_z_samples_iw = sample_n(mu=node_mu_iw, sigma=node_sigma_iw1)
         merged_node_z_samples = node_z_samples_iw.unsqueeze(2).repeat(1, 1, self.J + 1, 1)
         node_mu_star1 = node_mu_star.unsqueeze(1).repeat(1, self.K, 1, 1)
-        merged_node_mu = torch.concat((node_mu_star1, node_mu_iw.unsqueeze(2)), 2)
+        merged_node_mu = torch.cat((node_mu_star1, node_mu_iw.unsqueeze(2)), 2)
 
         # generate mu of attrs conditioning on mu of nodes
         if self.encoder_node_attr_attention:
@@ -265,7 +265,7 @@ class HOANE_V2(HOANE):
             attr_mu_input = torch.matmul(weights.transpose(0, 1), node_mu.transpose(0, 1)).transpose(0, 1)
             attr_noise_e = self.noise_dist.sample(torch.Size([attr_dim, self.K + self.J, self.noise_dim]))
             attr_noise_e = torch.squeeze(attr_noise_e)
-            noised_attr_mu_input = torch.concat((attr_noise_e, attr_mu_input), 2)  # 1433x2x(512+5)
+            noised_attr_mu_input = torch.cat((attr_noise_e, attr_mu_input), 2)  # 1433x2x(512+5)
 
         attr_mu = self.attr_mu_nn(noised_attr_mu_input)
         attr_mu_iw = attr_mu[:, :self.K, :]
@@ -286,7 +286,7 @@ class HOANE_V2(HOANE):
         attr_z_samples_iw = sample_n(mu=attr_mu_iw, sigma=attr_sigma_iw1)
         merged_attr_z_samples = attr_z_samples_iw.unsqueeze(2).repeat(1, 1, self.J + 1, 1)
         attr_mu_star1 = attr_mu_star.unsqueeze(1).repeat(1, self.K, 1, 1)
-        merged_attr_mu = torch.concat((attr_mu_star1, attr_mu_iw.unsqueeze(2)), 2)
+        merged_attr_mu = torch.cat((attr_mu_star1, attr_mu_iw.unsqueeze(2)), 2)
 
         return merged_node_mu, merged_node_sigma, merged_node_z_samples, node_logv_iw, node_z_samples_iw, \
                merged_attr_mu, merged_attr_sigma, merged_attr_z_samples, attr_logv_iw, attr_z_samples_iw, \
