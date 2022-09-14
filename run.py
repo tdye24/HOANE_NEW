@@ -149,7 +149,8 @@ def main(args):
             log_H_iw_vec = torch.log(torch.mean(ker, 2) + args.eps) - 0.5 * torch.sum(node_attr_logv_iw, 2)
             log_H_iw = torch.mean(log_H_iw_vec, 0)
 
-            adj_orig_tile = adj_label.unsqueeze(-1).repeat(1, 1, args.K)  # adj matrix
+            # adj_orig_tile = adj_label.unsqueeze(-1).repeat(1, 1, args.K)  # adj matrix
+            adj_orig_tile = adj_label.unsqueeze(-1).expand(-1, -1, args.K)  # adj matrix
             log_lik_iw_node = -1 * get_rec_loss(norm=norm,
                                                 pos_weight=pos_weight,
                                                 pred=reconstruct_node_logits,
@@ -160,7 +161,8 @@ def main(args):
             node_log_prior_iw = torch.mean(node_log_prior_iw_vec, 0)
 
             # attr重构loss
-            features_tile = features.unsqueeze(-1).repeat(1, 1, args.K)  # feature matrix
+            # features_tile = features.unsqueeze(-1).repeat(1, 1, args.K)  # feature matrix
+            features_tile = features.unsqueeze(-1).expand(-1, -1, args.K)  # feature matrix
             log_lik_iw_attr = -1 * get_rec_loss(norm=norm_a,
                                                 pos_weight=pos_weight_a,
                                                 pred=reconstruct_attr_logits,
@@ -198,7 +200,7 @@ def main(args):
                 elif attr_inference:
                     threshold = 0
                 else:
-                    threshold = 400
+                    threshold = 800
             else:
                 threshold = 0
 
