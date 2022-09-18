@@ -1,4 +1,4 @@
-cora_v1:
+cora_v1_node:
   version: v1
   dataset: cora
   node_classification: True
@@ -15,19 +15,14 @@ cora_v1:
   encoder_layers: 2
   decoder_type: gcn
   decoder_layers: 2
-  node_attr_attention: False
-  node_attr_attention_dropout: 0.0
-  encoder_node_attr_attention: False
-  encoder_node_attr_attention_dropout: 0.0
   attr_loss_type: bce
   num_hidden: 512
   out_dim: 512
-  heads: 4
   aug_e: 0
   aug_a: 0
   eps: 1e-10
 
-cora_v2:
+cora_v2_node:
   version: v2
   dataset: cora
   node_classification: True
@@ -44,19 +39,14 @@ cora_v2:
   encoder_layers: 2
   decoder_type: gcn
   decoder_layers: 2
-  node_attr_attention: False
-  node_attr_attention_dropout: 0.0
-  encoder_node_attr_attention: False
-  encoder_node_attr_attention_dropout: 0.0
   attr_loss_type: bce
   num_hidden: 512
   out_dim: 512
-  heads: 4
   aug_e: 0
   aug_a: 0
   eps: 1e-10
 
-cora_v3:
+cora_v3_node:
   version: v2
   dataset: cora
   node_classification: True
@@ -73,110 +63,12 @@ cora_v3:
   encoder_layers: 2
   decoder_type: gcn
   decoder_layers: 2
-  node_attr_attention: False
-  node_attr_attention_dropout: 0.0
-  encoder_node_attr_attention: False
-  encoder_node_attr_attention_dropout: 0.0
   attr_loss_type: bce
   num_hidden: 512
   out_dim: 512
-  heads: 4
   aug_e: 0.2
   aug_a: 0.1
   eps: 1e-10
-
-citeseer_v1:
-  version: v1
-  dataset: citeseer
-  node_classification: True
-  pretrain_epochs: 500
-  finetune_epochs: 500
-  finetune_interval: 50
-  pretrain_lr: 0.0005
-  finetune_lr: 0.001
-  pretrain_wd: 1e-3
-  finetune_wd: 5e-4
-  pretrain_dropout: 0.1
-  finetune_dropout: 0.9
-  encoder_type: gcn
-  encoder_layers: 1
-  decoder_type: gcn
-  decoder_layers: 3
-  node_attr_attention: False
-  node_attr_attention_dropout: 0.0
-  encoder_node_attr_attention: False
-  encoder_node_attr_attention_dropout: 0.0
-  attr_loss_type: bce
-  num_hidden: 512
-  out_dim: 512
-  heads: 4
-  aug_e: 0
-  aug_a: 0
-  eps: 1e-8
-
-# HKU GPU#1
-citeseer_v2:
-  version: v2
-  dataset: citeseer
-  node_classification: True
-  pretrain_epochs: 300
-  finetune_epochs: 500
-  finetune_interval: 30
-  pretrain_lr: 0.0005
-  finetune_lr: 0.001
-  pretrain_wd: 1e-3
-  finetune_wd: 5e-4
-  pretrain_dropout: 0.15
-  finetune_dropout: 0.9
-  encoder_type: gcn
-  encoder_layers: 1
-  decoder_type: gcn
-  decoder_layers: 2
-  node_attr_attention: False
-  node_attr_attention_dropout: 0.0
-  encoder_node_attr_attention: False
-  encoder_node_attr_attention_dropout: 0.0
-  attr_loss_type: bce
-  num_hidden: 512
-  out_dim: 512
-  heads: 4
-  aug_e: 0
-  aug_a: 0
-  eps: 1e-8
-
-citeseer_v3:
-  version: v2
-  dataset: citeseer
-  node_classification: True
-  pretrain_epochs: 500
-  finetune_epochs: 500
-  finetune_interval: 50
-  pretrain_lr: 0.0005
-  finetune_lr: 0.005
-  pretrain_wd: 1e-3
-  finetune_wd: 1e-4
-  pretrain_dropout: 0.1
-  finetune_dropout: 0.9
-  encoder_type: gcn
-  encoder_layers: 1
-  decoder_type: gcn
-  decoder_layers: 1
-  node_attr_attention: False
-  node_attr_attention_dropout: 0.0
-  encoder_node_attr_attention: False
-  encoder_node_attr_attention_dropout: 0.0
-  attr_loss_type: bce
-  num_hidden: 512
-  out_dim: 512
-  heads: 4
-  aug_e: 0.2
-  aug_a: 0.3
-  eps: 1e-8
-
-
-
-
-
 
 cora_v1_link:
   version: v1
@@ -195,14 +87,9 @@ cora_v1_link:
   encoder_layers: 1
   decoder_type: gcn
   decoder_layers: 1
-  node_attr_attention: False
-  node_attr_attention_dropout: 0.0
-  encoder_node_attr_attention: False
-  encoder_node_attr_attention_dropout: 0.0
   attr_loss_type: bce
   num_hidden: 512
   out_dim: 512
-  heads: 4
   aug_e: 0
   aug_a: 0
   eps: 1e-10
@@ -224,14 +111,9 @@ cora_v2_link:
   encoder_layers: 2
   decoder_type: gcn
   decoder_layers: 3
-  node_attr_attention: False
-  node_attr_attention_dropout: 0.0
-  encoder_node_attr_attention: False
-  encoder_node_attr_attention_dropout: 0.0
   attr_loss_type: bce
   num_hidden: 512
   out_dim: 512
-  heads: 4
   aug_e: 0
   aug_a: 0
   eps: 1e-10
@@ -253,14 +135,346 @@ cora_v3_link:
   encoder_layers: 2
   decoder_type: gcn
   decoder_layers: 3
-  node_attr_attention: False
-  node_attr_attention_dropout: 0.0
-  encoder_node_attr_attention: False
-  encoder_node_attr_attention_dropout: 0.0
   attr_loss_type: bce
   num_hidden: 512
   out_dim: 512
-  heads: 4
   aug_e: 0.3
   aug_a: 0.0
+  eps: 1e-10
+
+# HKU East
+citeseer_v1:
+  version: v1
+  dataset: citeseer
+  node_classification: True
+  pretrain_epochs: 500
+  finetune_epochs: 500
+  finetune_interval: 50
+  pretrain_lr: 0.0005
+  finetune_lr: 0.001
+  pretrain_wd: 1e-3
+  finetune_wd: 5e-4
+  pretrain_dropout: 0.1
+  finetune_dropout: 0.9
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 3
+  attr_loss_type: bce
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0
+  aug_a: 0
+  eps: 1e-8
+# HKU East
+citeseer_v2_node:
+  version: v2
+  dataset: citeseer
+  node_classification: True
+  pretrain_epochs: 300
+  finetune_epochs: 500
+  finetune_interval: 30
+  pretrain_lr: 0.0005
+  finetune_lr: 0.001
+  pretrain_wd: 1e-3
+  finetune_wd: 5e-4
+  pretrain_dropout: 0.15
+  finetune_dropout: 0.9
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 2
+  attr_loss_type: bce
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0
+  aug_a: 0
+  eps: 1e-8
+# HKU East
+citeseer_v3_node:
+  version: v2
+  dataset: citeseer
+  node_classification: True
+  pretrain_epochs: 300
+  finetune_epochs: 500
+  finetune_interval: 30
+  pretrain_lr: 0.0005
+  finetune_lr: 0.001
+  pretrain_wd: 1e-3
+  finetune_wd: 5e-4
+  pretrain_dropout: 0.15
+  finetune_dropout: 0.9
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 2
+  attr_loss_type: bce
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0.4
+  aug_a: 0.0
+  eps: 1e-8
+
+citeseer_v1_link:
+  version: v1
+  dataset: citeseer
+  link_prediction: True
+  pretrain_epochs: 3500
+  finetune_epochs: 0
+  finetune_interval: 0
+  pretrain_lr: 0.001
+  finetune_lr: 0.0
+  pretrain_wd: 0
+  finetune_wd: 0
+  pretrain_dropout: 0.0
+  finetune_dropout: 0.0
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 1
+  attr_loss_type: bce
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0.0
+  aug_a: 0.0
+  eps: 1e-8
+
+citeseer_v2_link:
+  version: v2
+  dataset: citeseer
+  link_prediction: True
+  pretrain_epochs: 3500
+  finetune_epochs: 0
+  finetune_interval: 0
+  pretrain_lr: 0.001
+  finetune_lr: 0.0
+  pretrain_wd: 1e-4
+  finetune_wd: 0
+  pretrain_dropout: 0.0
+  finetune_dropout: 0.0
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 2
+  attr_loss_type: bce
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0.0
+  aug_a: 0.0
+  eps: 1e-8
+
+citeseer_v3_link:
+  version: v2
+  dataset: citeseer
+  link_prediction: True
+  pretrain_epochs: 3500
+  finetune_epochs: 0
+  finetune_interval: 0
+  pretrain_lr: 0.001
+  finetune_lr: 0.0
+  pretrain_wd: 1e-4
+  finetune_wd: 0
+  pretrain_dropout: 0.0
+  finetune_dropout: 0.0
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 2
+  attr_loss_type: bce
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0.6
+  aug_a: 0.0
+  eps: 1e-8
+
+cs_v1_node:
+  version: v1
+  dataset: cs
+  node_classification: True
+  pretrain_epochs: 20
+  finetune_epochs: 500
+  finetune_interval: 1
+  pretrain_lr: 0.001
+  finetune_lr: 0.001
+  pretrain_wd: 0
+  finetune_wd: 5e-4
+  pretrain_dropout: 0.1
+  finetune_dropout: 0.0
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 3
+  attr_loss_type: mse
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0
+  aug_a: 0
+  eps: 1e-10
+
+cs_v2_node:
+  version: v2
+  dataset: cs
+  node_classification: True
+  pretrain_epochs: 20
+  finetune_epochs: 500
+  finetune_interval: 1
+  pretrain_lr: 0.001
+  finetune_lr: 0.001
+  pretrain_wd: 1e-3
+  finetune_wd: 1e-3
+  pretrain_dropout: 0.1
+  finetune_dropout: 0.3
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 2
+  attr_loss_type: mse
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0
+  aug_a: 0
+  eps: 1e-10
+
+cs_v3_node:
+  version: v2
+  dataset: cs
+  node_classification: True
+  pretrain_epochs: 20
+  finetune_epochs: 500
+  finetune_interval: 1
+  pretrain_lr: 0.001
+  finetune_lr: 0.001
+  pretrain_wd: 1e-3
+  finetune_wd: 1e-3
+  pretrain_dropout: 0.1
+  finetune_dropout: 0.3
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 2
+  attr_loss_type: mse
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0.5
+  aug_a: 0.2
+  eps: 1e-10
+
+physics_v1_node:
+  version: v1
+  dataset: physics
+  node_classification: True
+  pretrain_epochs: 50
+  finetune_epochs: 500
+  finetune_interval: 5
+  pretrain_lr: 0.01
+  finetune_lr: 0.005
+  pretrain_wd: 0
+  finetune_wd: 5e-4
+  pretrain_dropout: 0.0
+  finetune_dropout: 0.5
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 3
+  attr_loss_type: mse
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0
+  aug_a: 0
+  eps: 1e-10
+
+physics_v2_node:
+  version: v2
+  dataset: physics
+  node_classification: True
+  pretrain_epochs: 50
+  finetune_epochs: 500
+  finetune_interval: 5
+  pretrain_lr: 0.01
+  finetune_lr: 0.01
+  pretrain_wd: 0
+  finetune_wd: 5e-5
+  pretrain_dropout: 0.0
+  finetune_dropout: 0.5
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 3
+  attr_loss_type: mse
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0
+  aug_a: 0
+  eps: 1e-10
+
+physics_v3_node:
+  version: v2
+  dataset: physics
+  node_classification: True
+  pretrain_epochs: 50
+  finetune_epochs: 500
+  finetune_interval: 5
+  pretrain_lr: 0.01
+  finetune_lr: 0.01
+  pretrain_wd: 0
+  finetune_wd: 5e-5
+  pretrain_dropout: 0.0
+  finetune_dropout: 0.5
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 3
+  attr_loss_type: mse
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0
+  aug_a: 0
+  eps: 1e-10
+
+photo_v1_node:
+  version: v1
+  dataset: photo
+  node_classification: True
+  pretrain_epochs: 50
+  finetune_epochs: 500
+  finetune_interval: 2
+  pretrain_lr: 0.001
+  finetune_lr: 0.001
+  pretrain_wd: 1e-4
+  finetune_wd: 5e-5
+  pretrain_dropout: 0.0
+  finetune_dropout: 0.1
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 2
+  attr_loss_type: mse
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0
+  aug_a: 0
+  eps: 1e-10
+
+comp_v1_node:
+  version: v1
+  dataset: comp
+  node_classification: True
+  pretrain_epochs: 100
+  finetune_epochs: 500
+  finetune_interval: 10
+  pretrain_lr: 0.005
+  finetune_lr: 0.01
+  pretrain_wd: 5e-5
+  finetune_wd: 0
+  pretrain_dropout: 0.0
+  finetune_dropout: 0.5
+  encoder_type: gcn
+  encoder_layers: 1
+  decoder_type: gcn
+  decoder_layers: 1
+  attr_loss_type: mse
+  num_hidden: 512
+  out_dim: 512
+  aug_e: 0
+  aug_a: 0
   eps: 1e-10
