@@ -23,6 +23,8 @@ def main(args):
     test_ap_over_runs = []
     val_acc_over_runs = []
     test_acc_over_runs = []
+    val_mse_over_runs = []
+    test_mse_over_runs = []
     for i, seed in enumerate(seeds):
         print(f"########## Run {i} for seed {seed} ##########")
         set_random_seed(seed=seed)
@@ -68,6 +70,9 @@ def main(args):
         best_ap_val = 0
         best_roc_test = 0
         best_ap_test = 0
+
+        best_val_mse = 1e8
+        best_test_mse = 1e8
 
         outer_best_val_acc = 0
         outer_best_epoch = 0
@@ -212,32 +217,18 @@ def main(args):
                     node_mu_iw_vec, attr_mu_iw_vec = model.encode(
                         x=features_test,
                         adj=adj_norm_test)  # full edges and full attrs
-                if link_prediction or attr_inference:
-                    if link_prediction:
-                        roc_curr_val, ap_curr_val = get_roc_score_node(emb=node_mu_iw_vec.detach().cpu().numpy(),
-                                                                       edges_pos=val_edges,
-                                                                       edges_neg=val_edges_false,
-                                                                       adj=adj_orig)
+                if link_prediction:
+                    # todo(tdye): 改成model.decode()获取重node logits
+                    roc_curr_val, ap_curr_val = get_roc_score_node(emb=node_mu_iw_vec.detach().cpu().numpy(),
+                                                                   edges_pos=val_edges,
+                                                                   edges_neg=val_edges_false,
+                                                                   adj=adj_orig)
 
-                        roc_curr_test, ap_curr_test = get_roc_score_node(emb=node_mu_iw_vec.detach().cpu().numpy(),
-                                                                         edges_pos=test_edges,
-                                                                         edges_neg=test_edges_false,
-                                                                         adj=adj_orig)
-                    else:
-                        assert attr_inference
-                        roc_curr_val, ap_curr_val = get_roc_score_attr(
-                            emb_node=node_mu_iw_vec.detach().cpu().numpy(),
-                            emb_attr=attr_mu_iw_vec.detach().cpu().numpy(),
-                            feas_pos=val_feas,
-                            feas_neg=val_feas_false,
-                            features_orig=features_orig)
+                    roc_curr_test, ap_curr_test = get_roc_score_node(emb=node_mu_iw_vec.detach().cpu().numpy(),
+                                                                     edges_pos=test_edges,
+                                                                     edges_neg=test_edges_false,
+                                                                     adj=adj_orig)
 
-                        roc_curr_test, ap_curr_test = get_roc_score_attr(
-                            emb_node=node_mu_iw_vec.detach().cpu().numpy(),
-                            emb_attr=attr_mu_iw_vec.detach().cpu().numpy(),
-                            feas_pos=test_feas,
-                            feas_neg=test_feas_false,
-                            features_orig=features_orig)
                     print("Epoch:", '%04d' % epoch, "val_ap=", "{:.5f}".format(ap_curr_val))
                     print("Epoch:", '%04d' % epoch, "val_roc=", "{:.5f}".format(roc_curr_val))
                     print("Epoch:", '%04d' % epoch, "test_ap=", "{:.5f}".format(ap_curr_test))
@@ -253,8 +244,53 @@ def main(args):
                     else:
                         tolerance += 1
 
+                elif attr_inference:
+                    with torch.no_grad():
+                        reconstruct_node_logits, reconstruct_attr_logits = model.decode(adj=adj_norm_test,
+                                                                                        x=features_test,
+                                                                                        node_z=node_z_samples_iw,
+                                                                                        attr_z=attr_z_samples_iw)
+                    val_mse_loss = get_mse_attr(
+                        fea_rec=reconstruct_attr_logits,
+                        feas_pos=val_feas,
+                        feas_neg=val_feas_false,
+                        features_orig=features_orig)
+
+                    test_mse_loss = get_mse_attr(
+                        fea_rec=reconstruct_attr_logits,
+                        feas_pos=test_feas,
+                        feas_neg=test_feas_false,
+                        features_orig=features_orig)
+
+                    # roc_curr_val, ap_curr_val = get_roc_score_attr(
+                    #     emb_node=node_mu_iw_vec.detach().cpu().numpy(),
+                    #     emb_attr=attr_mu_iw_vec.detach().cpu().numpy(),
+                    #     feas_pos=val_feas,
+                    #     feas_neg=val_feas_false,
+                    #     features_orig=features_orig)
+                    #
+                    # roc_curr_test, ap_curr_test = get_roc_score_attr(
+                    #     emb_node=node_mu_iw_vec.detach().cpu().numpy(),
+                    #     emb_attr=attr_mu_iw_vec.detach().cpu().numpy(),
+                    #     feas_pos=test_feas,
+                    #     feas_neg=test_feas_false,
+                    #     features_orig=features_orig)
+
+                    if val_mse_loss < best_val_mse:
+                        tolerance = 0
+                        best_val_mse = val_mse_loss
+                        best_test_mse = test_mse_loss
+                    else:
+                        tolerance += 1
+
+                    print("Epoch:", '%04d' % epoch, "val_mse=", "{:.5f}".format(val_mse_loss))
+                    print("Epoch:", '%04d' % epoch, "val_roc=", "{:.5f}".format(test_mse_loss))
+                    print("Best val mse=", "{:.5f}".format(best_val_mse))
+                    print("Best test mse=", "{:.5f}".format(best_test_mse))
+                    print('--------------------------------')
+
                 # test classification performance
-                if args.node_classification and epoch % args.finetune_interval == 0:
+                elif args.node_classification and epoch % args.finetune_interval == 0:
 
                     # graph_mae_embedding = np.load('./embedding.npy')
                     # node_mu_iw_vec = torch.tensor(graph_mae_embedding).to(args.device)
@@ -287,19 +323,25 @@ def main(args):
                     print(
                         f"[Outer] --- Best ValAcc: {outer_best_val_acc:.4f} in epoch {outer_best_epoch}, ",
                         f"Best TestAcc: {outer_best_test_acc:.4f} --- ")
-        if link_prediction or attr_inference:
+        if link_prediction:
             print("val_roc:", '{:.5f}'.format(best_roc_val), "val_ap=", "{:.5f}".format(best_ap_val))
             print("test_roc:", '{:.5f}'.format(best_roc_test), "test_ap=", "{:.5f}".format(best_ap_test))
             test_roc_over_runs.append(best_roc_test)
             test_ap_over_runs.append(best_ap_test)
-        if node_classification:
+        elif attr_inference:
+            print("Val mse:", "{:.5f}".format(best_val_mse))
+            print("Test mse:", "{:.5f}".format(best_test_mse))
+            val_mse_over_runs.append(best_val_mse)
+            test_mse_over_runs.append(best_test_mse)
+        else:
+            assert node_classification
             if LOSS_NAN:
                 break
             print("Node classification, val_acc", '{:.5f}'.format(outer_best_val_acc), "test_acc",
                   '{:.5f}'.format(outer_best_test_acc))
             val_acc_over_runs.append(outer_best_val_acc)
             test_acc_over_runs.append(outer_best_test_acc)
-    if link_prediction or attr_inference:
+    if link_prediction:
         print("Test ROC", test_roc_over_runs)
         print("Test AP", test_ap_over_runs)
         print("ROC: {:.5f}".format(np.mean(test_roc_over_runs)), "+-", "{:.5f}".format(np.std(test_roc_over_runs)))
@@ -313,8 +355,24 @@ def main(args):
                 'APStd': np.std(test_ap_over_runs)
             }
             wandb.log(summary)
+    elif attr_inference:
+        with open(f'./{args.filename}', 'a') as f:
+            f.write(f"pretrain_lr {args.pretrain_lr}, "
+                    f"finetune_lr {args.finetune_lr}, "
+                    f"pretrain_wd {args.pretrain_wd}, "
+                    f"finetune_wd {args.finetune_wd}, "
+                    f"pretrain_dropout {args.pretrain_dropout}, "
+                    f"finetune_dropout {args.finetune_dropout}, "
+                    f"node_attr_attention_dropout {args.node_attr_attention_dropout}, "
+                    f"encoder_layers {args.encoder_layers}, "
+                    f"decoder_layers {args.decoder_layers}, "
+                    f"aug_e {args.aug_e}, "
+                    f"aug_a {args.aug_a}\n")
+            f.write(f"Val mse: {np.mean(val_mse_over_runs):.4f}/{np.std(val_mse_over_runs):.4f}\n")
+            f.write(f"Test accuracy: {np.mean(test_mse_over_runs):.4f}/{np.std(test_mse_over_runs):.4f}\n")
 
-    if node_classification:
+    else:
+        assert node_classification
         if LOSS_NAN:
             with open(f'./{args.filename}', 'a') as f:
                 f.write(f"pretrain_lr {args.pretrain_lr}, "

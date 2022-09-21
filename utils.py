@@ -9,7 +9,7 @@ import pickle as pkl
 import scipy.sparse as sp
 import torch.nn.functional as F
 import networkx as nx
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import roc_auc_score, average_precision_score, mean_squared_error
 import torch.optim as optim
 from layers import LogisticRegression
 from dgl.data import AmazonCoBuyPhotoDataset, AmazonCoBuyComputerDataset, CoauthorCSDataset, CoauthorPhysicsDataset
@@ -379,6 +379,7 @@ def mask_test_feas(features):
     np.random.shuffle(all_fea_idx)
     val_fea_idx = all_fea_idx[:num_val]
     test_fea_idx = all_fea_idx[num_val:(num_val + num_test)]
+    train_fea_idx = all_fea_idx[num_val+num_test:]
     feas = np.array(feas)
     test_feas = feas[test_fea_idx]
     val_feas = feas[val_fea_idx]
@@ -406,7 +407,9 @@ def mask_test_feas(features):
             else:
                 if len(test_feas_false) < num_test:
                     test_feas_false.append([i, j])
-    data = np.ones(train_feas.shape[0])
+    # data = np.ones(train_feas.shape[0])
+    # todo(tdye): 非binary属性，要特别赋值
+    data = sparse_to_tuple(features)[1][train_fea_idx]
     fea_train = sp.csr_matrix((data, (train_feas[:, 0], train_feas[:, 1])), shape=features.shape)
     return fea_train, train_feas, val_feas, val_feas_false, test_feas, test_feas_false
 
@@ -542,6 +545,29 @@ def get_roc_score_attr(feas_pos, feas_neg, emb_node, emb_attr, features_orig):
     ap_score = average_precision_score(labels_all, preds_all)
 
     return roc_score, ap_score
+
+
+def get_mse_attr(feas_pos, feas_neg, fea_rec, features_orig):
+    # Predict on test set of edges
+    preds = []
+    pos = []
+    for e in feas_pos:
+        preds.append(fea_rec[e[0], e[1]][0].item())  # Note this [0].item
+        pos.append(features_orig[e[0], e[1]])
+
+    preds_neg = []
+    neg = []
+    for e in feas_neg:
+        preds_neg.append(fea_rec[e[0], e[1]])
+        neg.append(features_orig[e[0], e[1]])
+
+    preds_all = np.hstack([preds, preds_neg])
+    labels_all = np.hstack([pos, neg])
+
+    # roc_score = roc_auc_score(labels_all, preds_all)
+    # ap_score = average_precision_score(labels_all, preds_all)
+    mse_loss = mean_squared_error(labels_all, preds_all)
+    return mse_loss
 
 
 def node_classification_evaluation(data, labels, train_mask, val_mask, test_mask, args):
