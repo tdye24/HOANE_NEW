@@ -284,7 +284,7 @@ def main(args):
                         tolerance += 1
 
                     print("Epoch:", '%04d' % epoch, "val_mse=", "{:.5f}".format(val_mse_loss))
-                    print("Epoch:", '%04d' % epoch, "val_roc=", "{:.5f}".format(test_mse_loss))
+                    print("Epoch:", '%04d' % epoch, "val_mse=", "{:.5f}".format(test_mse_loss))
                     print("Best val mse=", "{:.5f}".format(best_val_mse))
                     print("Best test mse=", "{:.5f}".format(best_test_mse))
                     print('--------------------------------')
@@ -369,7 +369,7 @@ def main(args):
                     f"aug_e {args.aug_e}, "
                     f"aug_a {args.aug_a}\n")
             f.write(f"Val mse: {np.mean(val_mse_over_runs):.4f}/{np.std(val_mse_over_runs):.4f}\n")
-            f.write(f"Test accuracy: {np.mean(test_mse_over_runs):.4f}/{np.std(test_mse_over_runs):.4f}\n")
+            f.write(f"Test mse: {np.mean(test_mse_over_runs):.4f}/{np.std(test_mse_over_runs):.4f}\n")
 
     else:
         assert node_classification
